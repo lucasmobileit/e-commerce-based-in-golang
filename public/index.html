@@ -27,6 +27,7 @@
 
       <div class="nav-actions">
         <button id="btnOrders" class="btn-nav">Meus Pedidos</button>
+        <button id="btnMetrics" class="btn-nav">📊 Métricas</button>
         <button id="btnCart" class="btn-nav btn-cart">
           🛒 Carrinho
           <span id="cartCountBadge" class="cart-badge">0</span>
@@ -87,3 +88,15 @@
   <script src="/app.js"></script>
 </body>
 </html>
+<!-- Modal Métricas -->
+<div id="metricsModal" class="modal-overlay hidden">
+  <div class="modal-card" style="max-width: 480px;">
+    <div class="drawer-header">
+      <h3>📊 Métricas de Negócio</h3>
+      <button id="btnCloseMetrics" class="btn-close">&times;</button>
+    </div>
+    <div id="metricsContent" class="modal-body">
+      <!-- Injetado via JS -->
+    </div>
+  </div>
+</div>
