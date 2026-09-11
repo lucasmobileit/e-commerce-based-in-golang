@@ -1,11 +1,30 @@
-// Estado local da aplicação
 let allProducts = [];
+let appliedCoupon = null;
+let currentAuthUser = null;
 
-function getCurrentUserId() {
-  const input = document.getElementById("userIdInput");
-  return input && input.value.trim() ? input.value.trim() : "guest-default";
+// 1. Valida a sessão via Cookie no backend
+async function checkAuthSession() {
+  try {
+    const res = await fetch("/auth/me");
+    if (!res.ok) {
+      window.location.href = "/login.html";
+      return false;
+    }
+    currentAuthUser = await res.json();
+    
+    // Atualiza o nome exibido no topo da loja
+    const label = document.getElementById("userNameLabel");
+    if (label && currentAuthUser.name) {
+      label.innerText = currentAuthUser.name.split(" ")[0];
+    }
+    return true;
+  } catch (err) {
+    window.location.href = "/login.html";
+    return false;
+  }
 }
 
+// 2. Ícones dinâmicos por categoria
 function getCategoryIcon(category) {
   const map = {
     "Eletrônicos": "💻",
@@ -17,7 +36,7 @@ function getCategoryIcon(category) {
   return map[category] || "📦";
 }
 
-// 1. Carregar catálogo de produtos (GET /products)
+// 3. Carregar catálogo de produtos (GET /products)
 async function fetchProducts() {
   const grid = document.getElementById("productsGrid");
   try {
@@ -27,11 +46,11 @@ async function fetchProducts() {
     renderProducts(allProducts);
   } catch (err) {
     console.error("Falha ao carregar produtos:", err);
-    if (grid) grid.innerHTML = "<p style='color:#c00;'>Erro ao conectar com a API ou banco vazio.</p>";
+    if (grid) grid.innerHTML = "<p style='color:#c00;'>Erro ao carregar produtos.</p>";
   }
 }
 
-// 2. Renderizar cards na tela
+// 4. Renderizar catálogo na tela com estoque dinâmico
 function renderProducts(products) {
   const grid = document.getElementById("productsGrid");
   if (!grid) return;
@@ -43,22 +62,34 @@ function renderProducts(products) {
   }
 
   products.forEach(p => {
+    const isOutOfStock = p.stock <= 0;
+    const stockBadge = isOutOfStock
+      ? `<span style="color:#d32f2f; font-weight:bold; font-size:12px;">Esgotado</span>`
+      : `<span style="color:#2e7d32; font-weight:bold; font-size:12px;">Disponível: ${p.stock} un.</span>`;
+
+    const buttonHtml = isOutOfStock
+      ? `<button class="btn-add" disabled style="background:#ccc; cursor:not-allowed;">Indisponível</button>`
+      : `<button class="btn-add" data-id="${p.id}">Adicionar ao carrinho</button>`;
+
     const card = document.createElement("div");
     card.className = "product-card";
     card.innerHTML = `
       <div class="product-img-box">${getCategoryIcon(p.category)}</div>
       <div class="product-info">
-        <span class="product-category">${p.category}</span>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <span class="product-category">${p.category}</span>
+          ${stockBadge}
+        </div>
         <h3 class="product-title">${p.name}</h3>
         <span class="product-price">R$ ${Number(p.price).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
         <span class="product-shipping">⚡ Chegará grátis amanhã</span>
-        <button class="btn-add" data-id="${p.id}">Adicionar ao carrinho</button>
+        ${buttonHtml}
       </div>
     `;
     grid.appendChild(card);
   });
 
-  document.querySelectorAll(".btn-add").forEach(btn => {
+  document.querySelectorAll(".btn-add:not([disabled])").forEach(btn => {
     btn.addEventListener("click", () => {
       const id = parseInt(btn.getAttribute("data-id"), 10);
       addToCart(id);
@@ -66,33 +97,29 @@ function renderProducts(products) {
   });
 }
 
-// 3. Adicionar produto ao carrinho (POST /cart)
+// 5. Adicionar ao carrinho (POST /cart)
 async function addToCart(productId) {
-  const userId = getCurrentUserId();
   try {
     const res = await fetch("/cart", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-User-ID": userId
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ product_id: productId })
     });
 
-    if (!res.ok) throw new Error("Não foi possível adicionar o produto");
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(errText);
+    }
     await fetchCart();
   } catch (err) {
-    alert(err.message);
+    alert("Aviso: " + err.message);
   }
 }
 
-// 4. Buscar e exibir dados do carrinho (GET /cart)
+// 6. Consultar carrinho do usuário logado (GET /cart)
 async function fetchCart() {
-  const userId = getCurrentUserId();
   try {
-    const res = await fetch("/cart", {
-      headers: { "X-User-ID": userId }
-    });
+    const res = await fetch("/cart");
     if (!res.ok) throw new Error("Erro ao consultar carrinho");
     const data = await res.json();
 
@@ -104,71 +131,166 @@ async function fetchCart() {
   }
 }
 
+// 7. Renderizar drawer do carrinho agrupando quantidades
 function renderCartDrawer(cartData) {
   const list = document.getElementById("cartItemsList");
-  const total = document.getElementById("cartTotalText");
-  if (!list || !total) return;
+  const subtotalEl = document.getElementById("cartSubtotalText");
+  const discountRow = document.getElementById("discountRow");
+  const discountEl = document.getElementById("cartDiscountText");
+  const discountTag = document.getElementById("discountTag");
+  const totalEl = document.getElementById("cartTotalText");
 
+  if (!list || !totalEl) return;
   list.innerHTML = "";
 
   if (!cartData.items || cartData.items.length === 0) {
     list.innerHTML = "<p style='color:#777; text-align:center; margin-top:20px;'>Seu carrinho está vazio.</p>";
-    total.innerText = "R$ 0,00";
+    subtotalEl.innerText = "R$ 0,00";
+    totalEl.innerText = "R$ 0,00";
+    discountRow.style.display = "none";
+    appliedCoupon = null;
     return;
   }
 
+  const grouped = {};
   cartData.items.forEach(item => {
+    if (!grouped[item.id]) {
+      grouped[item.id] = { ...item, qty: 1 };
+    } else {
+      grouped[item.id].qty++;
+    }
+  });
+
+  let subtotal = 0;
+  Object.values(grouped).forEach(item => {
+    const itemTotal = item.price * item.qty;
+    subtotal += itemTotal;
+
     const el = document.createElement("div");
     el.className = "cart-item";
     el.innerHTML = `
-      <div>
+      <div style="flex:1;">
         <strong>${item.name}</strong><br/>
-        <small style="color:#777;">${item.category}</small>
+        <span style="display:inline-block; margin-top:2px; background:#e8f0fe; color:#1967d2; padding:1px 6px; border-radius:4px; font-size:12px; font-weight:bold;">
+          Qtd: ${item.qty} un.
+        </span>
+        <small style="color:#777; margin-left: 6px;">(R$ ${item.price.toFixed(2)} un)</small>
       </div>
-      <div>R$ ${Number(item.price).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</div>
+      <div style="font-weight:bold;">R$ ${itemTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</div>
     `;
     list.appendChild(el);
   });
 
-  total.innerText = `R$ ${Number(cartData.total).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
+  let discount = 0;
+  if (appliedCoupon) {
+    if (appliedCoupon.discount_type === "percentage") {
+      discount = subtotal * (appliedCoupon.discount_value / 100.0);
+    } else if (appliedCoupon.discount_type === "fixed") {
+      discount = appliedCoupon.discount_value;
+    }
+    if (discount > subtotal) discount = subtotal;
+
+    discountRow.style.display = "flex";
+    discountTag.innerText = appliedCoupon.code;
+    discountEl.innerText = `- R$ ${discount.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
+  } else {
+    discountRow.style.display = "none";
+  }
+
+  const finalTotal = subtotal - discount;
+  subtotalEl.innerText = `R$ ${subtotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
+  totalEl.innerText = `R$ ${finalTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
 }
 
-// 5. Checkout com pagamento fake e persistência (POST /checkout)
+// 8. Aplicar cupom promocional (POST /coupons/apply)
+async function applyCoupon() {
+  const input = document.getElementById("couponInput");
+  const status = document.getElementById("couponStatusText");
+  const code = input.value.trim().toUpperCase();
+
+  if (!code) {
+    status.style.display = "block";
+    status.style.color = "#d32f2f";
+    status.innerText = "Digite um código de cupom.";
+    return;
+  }
+
+  try {
+    const res = await fetch("/coupons/apply", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code })
+    });
+
+    if (!res.ok) {
+      appliedCoupon = null;
+      status.style.display = "block";
+      status.style.color = "#d32f2f";
+      status.innerText = "Cupom inválido ou expirado.";
+      await fetchCart();
+      return;
+    }
+
+    appliedCoupon = await res.json();
+    status.style.display = "block";
+    status.style.color = "#00a650";
+
+    const descText = appliedCoupon.discount_type === "percentage"
+      ? `${appliedCoupon.discount_value}% de desconto`
+      : `R$ ${appliedCoupon.discount_value.toFixed(2)} de desconto`;
+
+    status.innerText = `✅ Cupom ${appliedCoupon.code} aplicado: ${descText}!`;
+    await fetchCart();
+  } catch (err) {
+    alert("Erro na requisição: " + err.message);
+  }
+}
+
+// 9. Checkout transacional (POST /checkout)
 async function checkout() {
-  const userId = getCurrentUserId();
+  const couponCode = appliedCoupon ? appliedCoupon.code : "";
+
   try {
     const res = await fetch("/checkout", {
       method: "POST",
-      headers: { "X-User-ID": userId }
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ coupon_code: couponCode })
     });
 
     const data = await res.json();
 
     if (res.status === 201) {
-      alert(`✅ SUCESSO! Pedido #${data.order_id} aprovado.\nTotal: R$ ${data.total.toFixed(2)}`);
+      let couponMsg = data.coupon_applied ? `\nCupom: ${data.coupon_applied}` : "";
+      alert(`✅ SUCESSO! Pedido #${data.order_id} aprovado.\nTotal: R$ ${data.total.toFixed(2)}${couponMsg}\nEstoque atualizado.`);
+      appliedCoupon = null;
+      document.getElementById("couponInput").value = "";
+      document.getElementById("couponStatusText").style.display = "none";
       await fetchCart();
+      await fetchProducts();
       document.getElementById("cartModal").classList.add("hidden");
     } else if (res.status === 402) {
-      alert(`❌ PAGAMENTO RECUSADO!\nPedido #${data.order_id} registrado como falha.\nOs produtos continuam no seu carrinho.`);
+      alert(`❌ PAGAMENTO RECUSADO!\nPedido #${data.order_id} registrado como falha.\nO estoque não foi debitado e seus itens continuam no carrinho.`);
       await fetchCart();
+    } else if (res.status === 409) {
+      alert(`⚠️ CONFLITO DE ESTOQUE!\n${data.message}`);
+      await fetchProducts();
     } else {
       alert("Aviso: " + (data.message || "Erro no processamento"));
     }
   } catch (err) {
-    alert("Erro de comunicação com o servidor: " + err.message);
+    alert("Erro de comunicação: " + err.message);
   }
 }
 
-// 6. Consultar histórico de pedidos no banco (GET /orders)
+// 10. Histórico de pedidos do usuário autenticado (GET /orders)
 async function fetchOrders() {
-  const userId = getCurrentUserId();
   const label = document.getElementById("ordersUserLabel");
-  if (label) label.innerText = userId;
+  if (label && currentAuthUser) {
+    label.innerText = currentAuthUser.name || currentAuthUser.id;
+  }
 
   try {
-    const res = await fetch("/orders", {
-      headers: { "X-User-ID": userId }
-    });
+    const res = await fetch("/orders");
     const orders = await res.json();
     const list = document.getElementById("ordersList");
     if (!list) return;
@@ -182,19 +304,20 @@ async function fetchOrders() {
         const isSuccess = o.status === "completed";
         const badgeColor = isSuccess ? "#00a650" : "#dc3545";
         const badgeText = isSuccess ? "Aprovado" : "Falhou";
+        const couponInfo = o.coupon_applied ? `<span style="color:#00a650; font-weight:bold;">[Cupom: ${o.coupon_applied}]</span>` : "";
 
         const div = document.createElement("div");
         div.className = "order-entry";
         div.innerHTML = `
           <div style="display:flex; justify-content:space-between; align-items:center;">
-            <strong>Pedido #${o.id}</strong>
+            <strong>Pedido #${o.id} ${couponInfo}</strong>
             <span style="background:${badgeColor}; color:#fff; padding:2px 8px; border-radius:4px; font-size:12px; font-weight:bold;">
               ${badgeText}
             </span>
           </div>
           <small style="color:#777;">${new Date(o.created_at).toLocaleString("pt-BR")}</small><br/>
-          <span>Itens: ${o.items ? o.items.length : 0}</span><br/>
-          <strong style="color:#333;">Total: R$ ${Number(o.total).toFixed(2)}</strong>
+          <span>Subtotal: R$ ${Number(o.subtotal || o.total).toFixed(2)} | Desconto: R$ ${Number(o.discount || 0).toFixed(2)}</span><br/>
+          <strong style="color:#333;">Total Final: R$ ${Number(o.total).toFixed(2)}</strong>
         `;
         list.appendChild(div);
       });
@@ -206,52 +329,14 @@ async function fetchOrders() {
   }
 }
 
-// 7. Consultar Métricas do Sistema (GET /metrics)
-async function fetchMetrics() {
-  try {
-    const res = await fetch("/metrics");
-    if (!res.ok) throw new Error("Falha ao obter métricas da API");
-    const m = await res.json();
-    const content = document.getElementById("metricsContent");
-    if (!content) return;
+// 11. Inicialização de Eventos
+document.addEventListener("DOMContentLoaded", async () => {
+  const authenticated = await checkAuthSession();
+  if (!authenticated) return;
 
-    content.innerHTML = `
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-        <div style="background: #f8f9fa; padding: 12px; border-radius: 6px; border: 1px solid #e9ecef;">
-          <small style="color:#666;">Total de Pedidos</small>
-          <h3 style="margin-top:4px; font-size:22px;">${m.total_orders}</h3>
-        </div>
-        <div style="background: #e8f5e9; padding: 12px; border-radius: 6px; border: 1px solid #c8e6c9;">
-          <small style="color:#2e7d32;">Receita Aprovada</small>
-          <h3 style="margin-top:4px; font-size:22px; color:#2e7d32;">R$ ${Number(m.revenue).toFixed(2)}</h3>
-        </div>
-        <div style="background: #ffebee; padding: 12px; border-radius: 6px; border: 1px solid #ffcdd2;">
-          <small style="color:#c62828;">Checkouts Falhos</small>
-          <h3 style="margin-top:4px; font-size:22px; color:#c62828;">${m.failed_sales}</h3>
-        </div>
-        <div style="background: #f8f9fa; padding: 12px; border-radius: 6px; border: 1px solid #e9ecef;">
-          <small style="color:#666;">Ticket Médio</small>
-          <h3 style="margin-top:4px; font-size:22px;">R$ ${Number(m.average_ticket).toFixed(2)}</h3>
-        </div>
-      </div>
-      <div style="margin-top: 14px; background: #e3f2fd; padding: 12px; border-radius: 6px; text-align: center; border: 1px solid #bbdefb;">
-        <span style="color:#1565c0;">Taxa de Conversão:</span>
-        <strong style="color:#0d47a1; font-size:18px; margin-left: 6px;">${Number(m.conversion_rate).toFixed(1)}%</strong>
-      </div>
-    `;
-
-    document.getElementById("metricsModal").classList.remove("hidden");
-  } catch (err) {
-    alert("Erro ao buscar métricas: " + err.message);
-  }
-}
-
-// 8. Inicialização de eventos
-document.addEventListener("DOMContentLoaded", () => {
   fetchProducts();
   fetchCart();
 
-  // Filtro de pesquisa no front
   const searchInput = document.getElementById("searchInput");
   if (searchInput) {
     searchInput.addEventListener("input", (e) => {
@@ -263,34 +348,19 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Troca de identificador de usuário
-  const userInput = document.getElementById("userIdInput");
-  if (userInput) {
-    userInput.addEventListener("change", () => {
-      fetchCart();
-    });
-  }
+  document.getElementById("btnCart").onclick = () => document.getElementById("cartModal").classList.remove("hidden");
+  document.getElementById("btnCloseCart").onclick = () => document.getElementById("cartModal").classList.add("hidden");
+  document.getElementById("btnCheckout").onclick = checkout;
+  document.getElementById("btnApplyCoupon").onclick = applyCoupon;
 
-  // Controles do Carrinho
-  const btnCart = document.getElementById("btnCart");
-  const btnCloseCart = document.getElementById("btnCloseCart");
-  const btnCheckout = document.getElementById("btnCheckout");
-
-  if (btnCart) btnCart.onclick = () => document.getElementById("cartModal").classList.remove("hidden");
-  if (btnCloseCart) btnCloseCart.onclick = () => document.getElementById("cartModal").classList.add("hidden");
-  if (btnCheckout) btnCheckout.onclick = checkout;
-
-  // Controles de Pedidos
-  const btnOrders = document.getElementById("btnOrders");
-  const btnCloseOrders = document.getElementById("btnCloseOrders");
-
-  if (btnOrders) btnOrders.onclick = fetchOrders;
-  if (btnCloseOrders) btnCloseOrders.onclick = () => document.getElementById("ordersModal").classList.add("hidden");
-
-  // Controles do Modal de Métricas
-  const btnMetrics = document.getElementById("btnMetrics");
-  const btnCloseMetrics = document.getElementById("btnCloseMetrics");
-
-  if (btnMetrics) btnMetrics.onclick = fetchMetrics;
-  if (btnCloseMetrics) btnCloseMetrics.onclick = () => document.getElementById("metricsModal").classList.add("hidden");
+  document.getElementById("btnOrders").onclick = fetchOrders;
+  document.getElementById("btnCloseOrders").onclick = () => document.getElementById("ordersModal").classList.add("hidden");
 });
+
+const btnLogout = document.getElementById("btnLogout");
+if (btnLogout) {
+  btnLogout.onclick = async () => {
+    await fetch("/logout", { method: "POST" });
+    window.location.href = "/login.html";
+  };
+}
