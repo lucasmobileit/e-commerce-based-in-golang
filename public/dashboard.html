@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mercado Go | Executive Dashboard (KPI & KRI)</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --card-border: #334155;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #38bdf8;
+      --accent-ml: #ffe600;
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --card-radius: 10px;
+    }
+
+    * { margin:0; padding:0; box-sizing:border-box; font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: var(--bg); color: var(--text-main); min-height: 100vh; padding-bottom: 40px; }
+
+    /* Header Executivo */
+    header {
+      background: #090d16;
+      border-bottom: 1px solid var(--card-border);
+      padding: 16px 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .brand-section { display: flex; align-items: center; gap: 12px; }
+    .logo { font-size: 22px; font-weight: 800; color: #fff; letter-spacing: -0.5px; }
+    .logo span { color: var(--accent-ml); }
+    .hub-badge {
+      background: rgba(56, 189, 248, 0.12);
+      color: var(--primary);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .header-actions { display: flex; align-items: center; gap: 12px; }
+
+    .period-selector {
+      display: flex;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 6px;
+      padding: 2px;
+    }
+    .period-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .period-btn.active, .period-btn:hover {
+      background: var(--primary);
+      color: #0f172a;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      text-decoration: none;
+      border: none;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn-simulate { background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; }
+    .btn-simulate:hover { opacity: 0.9; }
+    .btn-outline { background: transparent; border: 1px solid var(--card-border); color: var(--text-main); }
+    .btn-outline:hover { background: var(--card-bg); }
+
+    .container { max-width: 1400px; margin: 24px auto; padding: 0 20px; }
+
+    /* Risk Status Banner */
+    .risk-banner {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--card-radius);
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .risk-banner-info h2 { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+    .risk-banner-info p { font-size: 13px; color: var(--text-muted); }
+
+    .risk-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 18px;
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .risk-baixo { background: rgba(34, 197, 94, 0.15); color: var(--success); border: 1px solid var(--success); }
+    .risk-medio { background: rgba(245, 158, 11, 0.15); color: var(--warning); border: 1px solid var(--warning); }
+    .risk-alto { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid #f87171; }
+    .risk-critico { background: rgba(239, 68, 68, 0.3); color: #ff4d4f; border: 2px solid #ef4444; animation: pulseRisk 1.5s infinite; }
+
+    @keyframes pulseRisk {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+      50% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+    }
+
+    /* Section Titles */
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      border-bottom: 1px solid var(--card-border);
+      padding-bottom: 8px;
+    }
+    .section-header h3 {
+      font-size: 15px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .tag-kpi { color: var(--primary); }
+    .tag-kri { color: #f87171; }
+
+    /* Metric Grids */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+
+    .metric-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--card-radius);
+      padding: 18px 20px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      overflow: hidden;
+    }
+    .metric-card::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; width: 4px; height: 100%;
+      background: var(--primary);
+    }
+    .metric-card.card-kri::before { background: #ef4444; }
+    .metric-card.card-warning::before { background: var(--warning); }
+    .metric-card.card-success::before { background: var(--success); }
+
+    .metric-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+    .metric-title { font-size: 12px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; }
+    .metric-icon { font-size: 18px; }
+    .metric-value { font-size: 26px; font-weight: 800; color: #fff; margin-bottom: 4px; }
+    .metric-sub { font-size: 12px; color: var(--text-muted); }
+
+    /* Charts Section */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 20px;
+      margin-bottom: 28px;
+    }
+    @media (max-width: 1000px) {
+      .charts-grid { grid-template-columns: 1fr; }
+    }
+
+    .chart-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--card-radius);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+    }
+    .chart-card h4 {
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      color: var(--text-main);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .chart-box { position: relative; height: 260px; width: 100%; }
+
+    /* Tables & Feeds */
+    .tables-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 28px;
+    }
+    @media (max-width: 1000px) {
+      .tables-grid { grid-template-columns: 1fr; }
+    }
+
+    table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; }
+    th, td { padding: 10px 12px; border-bottom: 1px solid var(--card-border); }
+    th { color: var(--text-muted); font-weight: 600; font-size: 11px; text-transform: uppercase; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover { background: rgba(255,255,255,0.02); }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .badge-info { background: rgba(56, 189, 248, 0.15); color: var(--primary); }
+    .badge-warning { background: rgba(245, 158, 11, 0.15); color: var(--warning); }
+    .badge-critical { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+    .badge-success { background: rgba(34, 197, 94, 0.15); color: var(--success); }
+
+    /* Toast Notification */
+    #toastBox {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #0284c7;
+      color: #fff;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      display: none;
+      z-index: 1000;
+      animation: slideUp 0.3s ease;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    /* Access Denied */
+    #accessDenied {
+      display: none;
+      text-align: center;
+      padding: 80px 20px;
+      max-width: 500px;
+      margin: 0 auto;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Tela de Acesso Negado -->
+  <div id="accessDenied">
+    <h2 style="color:#ef4444; font-size:32px; margin-bottom:12px;">⛔ 403 - Acesso Restrito</h2>
+    <p style="color:var(--text-muted); margin-bottom:24px;">O Dashboard Executivo de KRIs/KPIs é restrito aos administradores do sistema.</p>
+    <a href="/login.html" class="btn btn-simulate">Ir para Tela de Login</a>
+  </div>
+
+  <div id="mainDashboard">
+    <!-- Header -->
+    <header>
+      <div class="brand-section">
+        <div class="logo">mercado<span>go</span></div>
+        <span class="hub-badge">Executive Intelligence & Risk Hub</span>
+      </div>
+
+      <div class="header-actions">
+        <div class="period-selector">
+          <button class="period-btn" onclick="setPeriod('today')">Hoje</button>
+          <button class="period-btn" onclick="setPeriod('7days')">7 Dias</button>
+          <button class="period-btn" onclick="setPeriod('30days')">30 Dias</button>
+          <button class="period-btn active" onclick="setPeriod('all')">Geral</button>
+        </div>
+
+        <button class="btn btn-simulate" onclick="simulateTraffic()" id="btnSimulate">
+          ⚡ Simular Cenário (Banca)
+        </button>
+
+        <a href="/admin.html" class="btn btn-outline">⚙️ Backoffice</a>
+        <a href="/" target="_blank" class="btn btn-outline">🛍️ Abrir Loja ↗</a>
+      </div>
+    </header>
+
+    <div class="container">
+      <!-- Status Geral de Risco -->
+      <div class="risk-banner">
+        <div class="risk-banner-info">
+          <h2>🛡️ Painel de Governança Executiva & Matriz de Risco</h2>
+          <p id="riskDesc">Monitorando integridade transacional, ameaças cibernéticas e saúde operacional.</p>
+        </div>
+        <div id="riskPill" class="risk-pill risk-baixo">
+          <span id="riskDot">●</span>
+          <span>Nível de Risco: <strong id="riskLevelText">BAIXO</strong> (Score: <span id="riskScoreText">0</span>/100)</span>
+        </div>
+      </div>
+
+      <!-- 1. Seção de KPIs (Performance & Vendas) -->
+      <div class="section-header">
+        <h3 class="tag-kpi">📊 Key Performance Indicators (KPIs de Negócio)</h3>
+        <span style="font-size:12px; color:var(--text-muted);" id="lastUpdated">Atualizando...</span>
+      </div>
+
+      <div class="metrics-grid">
+        <div class="metric-card card-success">
+          <div class="metric-header">
+            <span class="metric-title">GMV (Receita Aprovada)</span>
+            <span class="metric-icon">💰</span>
+          </div>
+          <div class="metric-value" id="kpiGmv">R$ 0,00</div>
+          <div class="metric-sub" id="kpiCompletedOrders">0 pedidos concluídos</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-header">
+            <span class="metric-title">Ticket Médio (AOV)</span>
+            <span class="metric-icon">🏷️</span>
+          </div>
+          <div class="metric-value" id="kpiAov">R$ 0,00</div>
+          <div class="metric-sub">Valor médio por compra aprovada</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-header">
+            <span class="metric-title">Conversão de Checkout</span>
+            <span class="metric-icon">🎯</span>
+          </div>
+          <div class="metric-value" id="kpiConversion">0.0%</div>
+          <div class="metric-sub" id="kpiOrdersRatio">0 de 0 tentativas</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-header">
+            <span class="metric-title">Eficiência Promocional</span>
+            <span class="metric-icon">🎟️</span>
+          </div>
+          <div class="metric-value" id="kpiDiscounts">R$ 0,00</div>
+          <div class="metric-sub" id="kpiActiveCoupons">0 cupons ativos disponíveis</div>
+        </div>
+      </div>
+
+      <!-- 2. Seção de KRIs (Indicadores de Risco & Fraude) -->
+      <div class="section-header">
+        <h3 class="tag-kri">⚠️ Key Risk Indicators (KRIs de Governança & Risco)</h3>
+      </div>
+
+      <div class="metrics-grid">
+        <div class="metric-card card-kri">
+          <div class="metric-header">
+            <span class="metric-title">Recusa de Pagamento</span>
+            <span class="metric-icon">💳</span>
+          </div>
+          <div class="metric-value" id="kriPaymentRate">0.0%</div>
+          <div class="metric-sub" id="kriPaymentLost">R$ 0,00 não convertidos</div>
+        </div>
+
+        <div class="metric-card card-kri">
+          <div class="metric-header">
+            <span class="metric-title">Tentativas de Força Bruta</span>
+            <span class="metric-icon">🚨</span>
+          </div>
+          <div class="metric-value" id="kriBruteForce">0</div>
+          <div class="metric-sub" id="kriUnauthorized">0 acessos não autorizados bloqueados</div>
+        </div>
+
+        <div class="metric-card card-warning">
+          <div class="metric-header">
+            <span class="metric-title">Risco de Ruptura de Estoque</span>
+            <span class="metric-icon">📦</span>
+          </div>
+          <div class="metric-value" id="kriStockout">0</div>
+          <div class="metric-sub" id="kriLowStock">0 produtos com estoque crítico (≤ 2 un)</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-header">
+            <span class="metric-title">SLI & Confiabilidade</span>
+            <span class="metric-icon">⚡</span>
+          </div>
+          <div class="metric-value" id="kriLatency">0 ms</div>
+          <div class="metric-sub" id="kriErrorRate">Erros 5xx: 0.0%</div>
+        </div>
+      </div>
+
+      <!-- 3. Gráficos de Análise Visual -->
+      <div class="charts-grid">
+        <!-- Gráfico Temporal de Vendas vs Recusas -->
+        <div class="chart-card">
+          <h4>
+            <span>📈 Evolução Financeira & Conclusão de Pedidos</span>
+            <small style="color:var(--text-muted); font-size:11px;">Receita vs Transações Recusadas</small>
+          </h4>
+          <div class="chart-box">
+            <canvas id="timelineChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Gráfico de Donut: Vendas por Categoria -->
+        <div class="chart-card">
+          <h4>
+            <span>🍩 Vendas por Categoria</span>
+            <small style="color:var(--text-muted); font-size:11px;">Participação de Faturamento</small>
+          </h4>
+          <div class="chart-box">
+            <canvas id="categoryChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. Gráficos Secundários: Top Produtos & Eventos de Segurança -->
+      <div class="charts-grid">
+        <!-- Top Produtos -->
+        <div class="chart-card">
+          <h4>
+            <span>🏆 Top 5 Produtos Mais Vendidos</span>
+            <small style="color:var(--text-muted); font-size:11px;">Quantidade de Unidades</small>
+          </h4>
+          <div class="chart-box">
+            <canvas id="productsChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Eventos de Segurança por Tipo -->
+        <div class="chart-card">
+          <h4>
+            <span>🛡️ Incidentes de Segurança & Risco</span>
+            <small style="color:var(--text-muted); font-size:11px;">Distribuição de Alertas</small>
+          </h4>
+          <div class="chart-box">
+            <canvas id="securityChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. Tabelas de Auditoria de Risco e Alertas de Estoque -->
+      <div class="tables-grid">
+        <!-- Tabela 1: Estoque em Alerta Crítico (KRI Ruptura) -->
+        <div class="chart-card">
+          <h4>
+            <span>📦 Produtos em Risco de Ruptura (Estoque Crítico)</span>
+            <a href="/admin.html" style="color:var(--primary); font-size:11px; text-decoration:none;">Reabastecer ↗</a>
+          </h4>
+          <table>
+            <thead>
+              <tr>
+                <th>Produto</th>
+                <th>Categoria</th>
+                <th>Preço</th>
+                <th>Estoque</th>
+                <th>Criticidade</th>
+              </tr>
+            </thead>
+            <tbody id="stockAlertsBody">
+              <tr><td colspan="5" style="text-align:center; color:var(--text-muted);">Nenhum alerta de ruptura no momento.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Tabela 2: Auditoria em Tempo Real de Riscos & Segurança -->
+        <div class="chart-card">
+          <h4>
+            <span>🛡️ Feed de Auditoria & Incidentes em Tempo Real</span>
+            <button onclick="loadDashboard()" style="background:none; border:none; color:var(--primary); cursor:pointer; font-size:11px;">🔄 Atualizar</button>
+          </h4>
+          <table>
+            <thead>
+              <tr>
+                <th>Data/Hora</th>
+                <th>Evento</th>
+                <th>Origem / Usuário</th>
+                <th>Severidade</th>
+                <th>Detalhes</th>
+              </tr>
+            </thead>
+            <tbody id="auditFeedBody">
+              <tr><td colspan="5" style="text-align:center; color:var(--text-muted);">Nenhum incidente registrado.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toastBox">Notificação</div>
+
+  <script>
+    let currentPeriod = "all";
+    let timelineChartInstance = null;
+    let categoryChartInstance = null;
+    let productsChartInstance = null;
+    let securityChartInstance = null;
+
+    function showToast(msg) {
+      const t = document.getElementById("toastBox");
+      t.innerText = msg;
+      t.style.display = "block";
+      setTimeout(() => { t.style.display = "none"; }, 3500);
+    }
+
+    function setPeriod(p) {
+      currentPeriod = p;
+      document.querySelectorAll(".period-btn").forEach(b => b.classList.remove("active"));
+      if (event && event.target) event.target.classList.add("active");
+      loadDashboard();
+    }
+
+    async function simulateTraffic() {
+      const btn = document.getElementById("btnSimulate");
+      btn.disabled = true;
+      btn.innerText = "⚡ Injetando Dados...";
+
+      try {
+        const res = await fetch("/api/admin/simulate", { method: "POST" });
+        if (res.status === 403) {
+          showToast("Acesso Negado: faça login como admin!");
+          return;
+        }
+        const data = await res.json();
+        showToast("✅ " + data.message);
+        await loadDashboard();
+      } catch (err) {
+        showToast("Erro na simulação: " + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "⚡ Simular Cenário (Banca)";
+      }
+    }
+
+    async function loadDashboard() {
+      try {
+        const res = await fetch(`/api/admin/metrics?period=${currentPeriod}`);
+        if (res.status === 403) {
+          document.getElementById("mainDashboard").style.display = "none";
+          document.getElementById("accessDenied").style.display = "block";
+          return;
+        }
+        if (!res.ok) throw new Error("Erro ao buscar métricas");
+
+        const data = await res.json();
+        renderKPIs(data.kpi);
+        renderKRIs(data.kri);
+        renderCharts(data.kpi, data.kri);
+        renderTables(data.kpi, data.kri);
+
+        document.getElementById("lastUpdated").innerText = "Atualizado às " + new Date().toLocaleTimeString("pt-BR");
+      } catch (err) {
+        console.error("Falha ao carregar dashboard:", err);
+      }
+    }
+
+    function renderKPIs(kpi) {
+      document.getElementById("kpiGmv").innerText = "R$ " + (kpi.gmv || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 });
+      document.getElementById("kpiCompletedOrders").innerText = `${kpi.completed_orders || 0} pedidos concluídos`;
+
+      document.getElementById("kpiAov").innerText = "R$ " + (kpi.average_order || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 });
+
+      document.getElementById("kpiConversion").innerText = (kpi.conversion_rate || 0).toFixed(1) + "%";
+      document.getElementById("kpiOrdersRatio").innerText = `${kpi.completed_orders || 0} de ${kpi.total_orders || 0} pedidos aprovados`;
+
+      document.getElementById("kpiDiscounts").innerText = "R$ " + (kpi.total_discounts || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 });
+      document.getElementById("kpiActiveCoupons").innerText = `${kpi.active_coupons || 0} cupons ativos disponíveis`;
+    }
+
+    function renderKRIs(kri) {
+      // Risk Banner Pill
+      const pill = document.getElementById("riskPill");
+      const levelText = document.getElementById("riskLevelText");
+      const scoreText = document.getElementById("riskScoreText");
+      const riskDesc = document.getElementById("riskDesc");
+
+      pill.className = "risk-pill";
+      levelText.innerText = kri.overall_risk_level;
+      scoreText.innerText = kri.overall_risk_score;
+
+      if (kri.overall_risk_level === "CRÍTICO") {
+        pill.classList.add("risk-critico");
+        riskDesc.innerText = "ALERTA MÁXIMO: Força bruta intensa ou alta taxa de recusas detectadas no ambiente.";
+      } else if (kri.overall_risk_level === "ALTO") {
+        pill.classList.add("risk-alto");
+        riskDesc.innerText = "Atenção necessária: Múltiplas falhas operacionais ou ameaças cibernéticas registradas.";
+      } else if (kri.overall_risk_level === "MÉDIO") {
+        pill.classList.add("risk-medio");
+        riskDesc.innerText = "Operação sob monitoramento: Indicadores moderados de risco de estoque ou tentativas inválidas.";
+      } else {
+        pill.classList.add("risk-baixo");
+        riskDesc.innerText = "Ambiente estável: Baixo volume de incidentes, transações operando normalmente.";
+      }
+
+      // KRI Cards
+      document.getElementById("kriPaymentRate").innerText = (kri.payment_failure_rate || 0).toFixed(1) + "%";
+      document.getElementById("kriPaymentLost").innerText = "R$ " + (kri.payment_failed_value || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 }) + " recusados";
+
+      document.getElementById("kriBruteForce").innerText = kri.brute_force_attempts || 0;
+      document.getElementById("kriUnauthorized").innerText = `${kri.unauthorized_attempts || 0} acessos bloqueados`;
+
+      document.getElementById("kriStockout").innerText = kri.out_of_stock_count || 0;
+      document.getElementById("kriLowStock").innerText = `${kri.low_stock_count || 0} produtos com estoque crítico (≤ 2)`;
+
+      document.getElementById("kriLatency").innerText = (kri.avg_latency_ms || 0).toFixed(1) + " ms";
+      document.getElementById("kriErrorRate").innerText = `Erros 5xx: ${(kri.error_5xx_rate || 0).toFixed(1)}%`;
+    }
+
+    function renderCharts(kpi, kri) {
+      Chart.defaults.color = "#94a3b8";
+      Chart.defaults.borderColor = "#334155";
+
+      // 1. Gráfico Temporal
+      const timelineCtx = document.getElementById("timelineChart").getContext("2d");
+      const timelineData = kpi.timeline || [];
+      const labels = timelineData.map(d => d.date);
+      const sales = timelineData.map(d => d.approved_total);
+      const failed = timelineData.map(d => d.failed_count);
+
+      if (timelineChartInstance) timelineChartInstance.destroy();
+      timelineChartInstance = new Chart(timelineCtx, {
+        type: "line",
+        data: {
+          labels: labels.length ? labels : ["Sem dados"],
+          datasets: [
+            {
+              label: "Receita Aprovada (R$)",
+              data: sales.length ? sales : [0],
+              borderColor: "#22c55e",
+              backgroundColor: "rgba(34, 197, 94, 0.1)",
+              fill: true,
+              tension: 0.3,
+              yAxisID: "y"
+            },
+            {
+              label: "Pedidos Recusados (Qtd)",
+              data: failed.length ? failed : [0],
+              borderColor: "#ef4444",
+              backgroundColor: "rgba(239, 68, 68, 0.1)",
+              fill: false,
+              tension: 0.3,
+              borderDash: [5, 5],
+              yAxisID: "y1"
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: "index", intersect: false },
+          scales: {
+            y: {
+              type: "linear",
+              position: "left",
+              ticks: { callback: v => "R$ " + v }
+            },
+            y1: {
+              type: "linear",
+              position: "right",
+              grid: { drawOnChartArea: false },
+              ticks: { stepSize: 1 }
+            }
+          }
+        }
+      });
+
+      // 2. Gráfico Categorias
+      const categoryCtx = document.getElementById("categoryChart").getContext("2d");
+      const catData = kpi.top_categories || [];
+      const catLabels = catData.map(c => c.category);
+      const catTotals = catData.map(c => c.total);
+
+      if (categoryChartInstance) categoryChartInstance.destroy();
+      categoryChartInstance = new Chart(categoryCtx, {
+        type: "doughnut",
+        data: {
+          labels: catLabels.length ? catLabels : ["Sem vendas"],
+          datasets: [{
+            data: catTotals.length ? catTotals : [1],
+            backgroundColor: ["#38bdf8", "#ffe600", "#a855f7", "#22c55e", "#f97316", "#ec4899"],
+            borderWidth: 2,
+            borderColor: "#1e293b"
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: "right" }
+          }
+        }
+      });
+
+      // 3. Top Produtos
+      const prodCtx = document.getElementById("productsChart").getContext("2d");
+      const prodData = kpi.top_products || [];
+      const prodLabels = prodData.map(p => p.name);
+      const prodSold = prodData.map(p => p.sold_qty);
+
+      if (productsChartInstance) productsChartInstance.destroy();
+      productsChartInstance = new Chart(prodCtx, {
+        type: "bar",
+        data: {
+          labels: prodLabels.length ? prodLabels : ["Sem produtos"],
+          datasets: [{
+            label: "Unidades Vendidas",
+            data: prodSold.length ? prodSold : [0],
+            backgroundColor: "#38bdf8",
+            borderRadius: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+      });
+
+      // 4. Incidentes de Segurança
+      const secCtx = document.getElementById("securityChart").getContext("2d");
+      const eventsMap = kri.events_by_type || {};
+      const evLabels = ["login_failed", "unauthorized_access", "payment_failed", "coupon_invalid"];
+      const evDisplay = ["Força Bruta / Login", "Acesso Bloqueado", "Recusa Cartão", "Cupom Inválido"];
+      const evCounts = evLabels.map(l => eventsMap[l] || 0);
+
+      if (securityChartInstance) securityChartInstance.destroy();
+      securityChartInstance = new Chart(secCtx, {
+        type: "bar",
+        data: {
+          labels: evDisplay,
+          datasets: [{
+            label: "Total de Ocorrências",
+            data: evCounts,
+            backgroundColor: ["#ef4444", "#dc2626", "#f59e0b", "#eab308"],
+            borderRadius: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+      });
+    }
+
+    function renderTables(kpi, kri) {
+      // 1. Alertas de Ruptura de Estoque
+      const stockTbody = document.getElementById("stockAlertsBody");
+      const critItems = kri.critical_stock_items || [];
+      stockTbody.innerHTML = "";
+
+      if (critItems.length === 0) {
+        stockTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:16px;">✅ Todos os produtos possuem estoque seguro (> 2 unidades).</td></tr>`;
+      } else {
+        critItems.forEach(p => {
+          const isZero = p.stock === 0;
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td><strong>${p.name}</strong></td>
+            <td>${p.category}</td>
+            <td>R$ ${p.price.toFixed(2)}</td>
+            <td><strong style="color:${isZero ? '#ef4444' : '#f59e0b'}">${p.stock} un.</strong></td>
+            <td>
+              <span class="badge ${isZero ? 'badge-critical' : 'badge-warning'}">
+                ${isZero ? 'Ruptura Ativa' : 'Estoque Baixo'}
+              </span>
+            </td>
+          `;
+          stockTbody.appendChild(tr);
+        });
+      }
+
+      // 2. Feed de Auditoria em Tempo Real
+      const auditTbody = document.getElementById("auditFeedBody");
+      const events = kri.recent_events || [];
+      auditTbody.innerHTML = "";
+
+      if (events.length === 0) {
+        auditTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:16px;">Nenhum evento registrado ainda.</td></tr>`;
+      } else {
+        events.forEach(e => {
+          let sevClass = "badge-info";
+          if (e.severity === "CRITICAL") sevClass = "badge-critical";
+          else if (e.severity === "WARNING") sevClass = "badge-warning";
+          else if (e.severity === "INFO") sevClass = "badge-success";
+
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td><small style="color:var(--text-muted);">${new Date(e.created_at).toLocaleTimeString("pt-BR")}</small></td>
+            <td><code>${e.event_type}</code></td>
+            <td>${e.user_id ? '<strong>' + e.user_id + '</strong>' : '<span style="color:#777;">anônimo</span>'} <small>(${e.ip_address})</small></td>
+            <td><span class="badge ${sevClass}">${e.severity}</span></td>
+            <td>${e.details}</td>
+          `;
+          auditTbody.appendChild(tr);
+        });
+      }
+    }
+
+    // Inicialização
+    document.addEventListener("DOMContentLoaded", () => {
+      loadDashboard();
+      // Auto-refresh a cada 30 segundos
+      setInterval(loadDashboard, 30000);
+    });
+  </script>
+</body>
+</html>

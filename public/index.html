@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mercado Go | Clone ML</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <!-- Header Amarelo Estilo Mercado Livre -->
+  <header class="ml-header">
+    <div class="header-container">
+      <div class="brand">
+        <span class="logo-icon">⚡</span>
+        <span class="logo-text">mercado<strong>go</strong></span>
+      </div>
+
+      <div class="search-box">
+        <input type="text" id="searchInput" placeholder="Buscar produtos, marcas e muito mais..." />
+        <button id="searchBtn" aria-label="Buscar">🔍</button>
+      </div>
+
+      <div class="user-session">
+        <label for="userIdInput">Usuário:</label>
+        <input type="text" id="userIdInput" value="lucas" title="Altere para simular outro cliente" />
+      </div>
+
+      <div class="nav-actions">
+        <button id="btnMetrics" class="btn-nav">📊 Métricas</button>
+        <button id="btnOrders" class="btn-nav">Meus Pedidos</button>
+        <button id="btnCart" class="btn-nav btn-cart">
+          🛒 Carrinho
+          <span id="cartCountBadge" class="cart-badge">0</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Banner Informativo -->
+  <div class="sub-header">
+    <div class="container sub-header-content">
+      <span>🚚 Frete grátis em milhares de produtos | Cupons ativos: <strong>GO10</strong> (10% OFF), <strong>MERCADOGO50</strong> (R$ 50 OFF)</span>
+      <span class="api-status">API: <strong id="apiStatusText">Conectada</strong></span>
+    </div>
+  </div>
+
+  <!-- Catálogo de Produtos -->
+  <main class="container">
+    <h2 class="section-title">Mais vendidos da semana</h2>
+    <div id="productsGrid" class="products-grid">
+      <!-- Cards injetados via app.js -->
+    </div>
+  </main>
+
+  <!-- Drawer / Gaveta do Carrinho -->
+  <div id="cartModal" class="modal-overlay hidden">
+    <div class="drawer">
+      <div class="drawer-header">
+        <h3>Seu Carrinho de Compras</h3>
+        <button id="btnCloseCart" class="btn-close">&times;</button>
+      </div>
+      <div id="cartItemsList" class="drawer-body">
+        <!-- Itens do carrinho -->
+      </div>
+      <div class="drawer-footer">
+        <!-- Seção de Cupom -->
+        <div class="coupon-box" style="margin-bottom: 12px; display: flex; gap: 8px;">
+          <input type="text" id="couponInput" placeholder="Cupom (ex: GO10)" style="flex:1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; text-transform: uppercase;" />
+          <button id="btnApplyCoupon" style="padding: 8px 12px; background: #3483fa; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">Aplicar</button>
+        </div>
+        <div id="couponStatusText" style="font-size: 12px; margin-bottom: 10px; display: none;"></div>
+
+        <div class="cart-summary" style="display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 6px; color: #666;">
+          <span>Subtotal:</span>
+          <span id="cartSubtotalText">R$ 0,00</span>
+        </div>
+        <div id="discountRow" class="cart-summary" style="display: none; justify-content: space-between; font-size: 14px; margin-bottom: 6px; color: #00a650; font-weight: 600;">
+          <span>Desconto (<span id="discountTag"></span>):</span>
+          <span id="cartDiscountText">- R$ 0,00</span>
+        </div>
+        <div class="cart-summary" style="display: flex; justify-content: space-between; font-size: 18px; margin-bottom: 14px;">
+          <span>Total:</span>
+          <strong id="cartTotalText">R$ 0,00</strong>
+        </div>
+        <button id="btnCheckout" class="btn-checkout">Fechar Compra</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Pedidos -->
+  <div id="ordersModal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="drawer-header">
+        <h3>Histórico de Pedidos (<span id="ordersUserLabel"></span>)</h3>
+        <button id="btnCloseOrders" class="btn-close">&times;</button>
+      </div>
+      <div id="ordersList" class="modal-body">
+        <!-- Lista de pedidos -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Métricas -->
+  <div id="metricsModal" class="modal-overlay hidden">
+    <div class="modal-card" style="max-width: 480px;">
+      <div class="drawer-header">
+        <h3>📊 Métricas de Negócio</h3>
+        <button id="btnCloseMetrics" class="btn-close">&times;</button>
+      </div>
+      <div id="metricsContent" class="modal-body">
+        <!-- Injetado via app.js -->
+      </div>
+    </div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

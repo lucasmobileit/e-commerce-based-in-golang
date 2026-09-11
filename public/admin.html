@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mercado Go | Admin Backoffice</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background:#f4f6f8; color:#333; }
+    header { background:#1e293b; color:#fff; padding:16px 24px; display:flex; justify-content:space-between; align-items:center; }
+    header h1 { font-size:18px; display:flex; align-items:center; gap:8px; }
+    header a { color:#38bdf8; text-decoration:none; font-size:14px; font-weight:bold; }
+    
+    .container { max-width:1200px; margin:24px auto; padding:0 16px; display:grid; grid-template-columns:1fr 1fr; gap:24px; }
+    .full-col { grid-column: 1 / -1; }
+    
+    .card { background:#fff; border-radius:8px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,.08); border:1px solid #e2e8f0; }
+    .card h2 { font-size:16px; margin-bottom:16px; color:#0f172a; border-bottom:1px solid #f1f5f9; padding-bottom:8px; }
+    
+    table { width:100%; border-collapse:collapse; font-size:13px; text-align:left; }
+    th, td { padding:10px 12px; border-bottom:1px solid #f1f5f9; vertical-align:middle; }
+    th { background:#f8fafc; color:#64748b; font-weight:600; }
+    
+    .form-group { display:flex; flex-direction:column; gap:6px; margin-bottom:12px; }
+    label { font-size:12px; font-weight:600; color:#475569; }
+    input, select { padding:8px 10px; border:1px solid #cbd5e1; border-radius:4px; font-size:14px; outline:none; }
+    input:focus, select:focus { border-color:#38bdf8; }
+    
+    .btn { padding:8px 14px; border:none; border-radius:4px; font-size:13px; font-weight:bold; cursor:pointer; }
+    .btn-primary { background:#0284c7; color:#fff; }
+    .btn-primary:hover { background:#0369a1; }
+    .btn-sm { padding:4px 8px; font-size:12px; }
+    .btn-toggle { background:#f1f5f9; border:1px solid #cbd5e1; }
+    
+    .badge { padding:3px 8px; border-radius:4px; font-size:11px; font-weight:bold; }
+    .badge-success { background:#dcfce7; color:#15803d; }
+    .badge-danger { background:#fee2e2; color:#b91c1c; }
+    .stock-input { width:65px; padding:4px 6px; text-align:center; }
+
+    /* Tela de Bloqueio */
+    #forbiddenScreen { display: none; text-align: center; margin-top: 80px; }
+    #forbiddenScreen h2 { font-size: 28px; color: #dc2626; margin-bottom: 8px; }
+    #forbiddenScreen p { color: #64748b; margin-bottom: 20px; }
+  </style>
+</head>
+<body>
+  <!-- Tela de Acesso Negado (Se não for admin) -->
+  <div id="forbiddenScreen">
+    <h2>⛔ 403 - Acesso Não Autorizado</h2>
+    <p>Apenas a conta de administrador tem permissão para visualizar o painel operacional.</p>
+    <a href="/" class="btn btn-primary" style="text-decoration:none;">Voltar para a Loja</a>
+  </div>
+
+  <div id="adminApp">
+    <header>
+      <h1>⚙️ Mercado Go - Backoffice Administrativo</h1>
+      <div style="display:flex; align-items:center; gap:16px;">
+        <span style="font-size:13px; background:#334155; padding:4px 10px; border-radius:4px;">Logado como: <strong>admin</strong></span>
+        <a href="/dashboard.html" style="background:#0284c7; color:#fff; padding:6px 12px; border-radius:4px; text-decoration:none; font-size:13px; font-weight:bold;">📊 Dashboard Executivo (KPI & KRI)</a>
+        <a href="/" target="_blank">Abrir Loja ↗</a>
+      </div>
+    </header>
+
+    <div class="container">
+      <!-- 1. Adicionar Novo Produto -->
+      <div class="card">
+        <h2>📦 Cadastrar Novo Produto</h2>
+        <form id="formProduct">
+          <div class="form-group">
+            <label>Nome do Produto</label>
+            <input type="text" id="pName" placeholder="Ex: Teclado Mecânico" required />
+          </div>
+          <div style="display:flex; gap:12px;">
+            <div class="form-group" style="flex:1;">
+              <label>Preço (R$)</label>
+              <input type="number" id="pPrice" step="0.01" placeholder="350.00" required />
+            </div>
+            <div class="form-group" style="flex:1;">
+              <label>Estoque Inicial</label>
+              <input type="number" id="pStock" value="10" required />
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Categoria</label>
+            <select id="pCategory">
+              <option value="Eletrônicos">Eletrônicos</option>
+              <option value="Eletrodomésticos">Eletrodomésticos</option>
+              <option value="Móveis">Móveis</option>
+              <option value="Sapatos">Sapatos</option>
+              <option value="Acessórios">Acessórios</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary" style="width:100%;">Salvar Produto</button>
+        </form>
+      </div>
+
+      <!-- 2. Criar Novo Cupom -->
+      <div class="card">
+        <h2>🎟️ Criar Cupom Promocional</h2>
+        <form id="formCoupon">
+          <div class="form-group">
+            <label>Código do Cupom</label>
+            <input type="text" id="cCode" placeholder="Ex: BLACKFRIDAY" style="text-transform:uppercase;" required />
+          </div>
+          <div style="display:flex; gap:12px;">
+            <div class="form-group" style="flex:1;">
+              <label>Tipo de Desconto</label>
+              <select id="cType">
+                <option value="percentage">Porcentagem (%)</option>
+                <option value="fixed">Valor Fixo (R$)</option>
+              </select>
+            </div>
+            <div class="form-group" style="flex:1;">
+              <label>Valor do Desconto</label>
+              <input type="number" id="cValue" step="0.01" placeholder="15" required />
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary" style="width:100%; margin-top:28px;">Criar Cupom</button>
+        </form>
+
+        <h2 style="margin-top:24px;">Cupons Ativos/Inativos</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Desconto</th>
+              <th>Status</th>
+              <th>Ação</th>
+            </tr>
+          </thead>
+          <tbody id="couponsTableBody"></tbody>
+        </table>
+      </div>
+
+      <!-- 3. Estoque -->
+      <div class="card full-col">
+        <h2>📋 Catálogo de Produtos & Reabastecimento de Estoque</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Produto</th>
+              <th>Categoria</th>
+              <th>Preço</th>
+              <th>Estoque Atual</th>
+              <th>Atualizar Estoque</th>
+            </tr>
+          </thead>
+          <tbody id="productsTableBody"></tbody>
+        </table>
+      </div>
+
+      <!-- 4. Pedidos da Operação -->
+      <div class="card full-col">
+        <h2>📑 Todos os Pedidos da Operação</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Usuário</th>
+              <th>Data</th>
+              <th>Cupom</th>
+              <th>Status</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody id="ordersTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Recupera o usuário passado via query string ou assume padrão
+    const urlParams = new URLSearchParams(window.location.search);
+    const currentUser = urlParams.get("user") || "admin";
+
+    // Helper padrão que SEMPRE injeta o X-User-ID em todas as requisições administrativas
+    async function adminFetch(url, options = {}) {
+      options.headers = {
+        ...options.headers,
+        "X-User-ID": currentUser
+      };
+      const res = await fetch(url, options);
+      if (res.status === 403) {
+        document.getElementById("adminApp").style.display = "none";
+        document.getElementById("forbiddenScreen").style.display = "block";
+        throw new Error("403 Forbidden");
+      }
+      return res;
+    }
+
+    async function loadAll() {
+      try {
+        await Promise.all([loadProducts(), loadCoupons(), loadOrders()]);
+      } catch (e) {
+        console.warn("Acesso bloqueado ou erro ao carregar backoffice.");
+      }
+    }
+
+    async function loadProducts() {
+      const res = await fetch("/products");
+      const products = await res.json();
+      const tbody = document.getElementById("productsTableBody");
+      tbody.innerHTML = "";
+
+      products.forEach(p => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>#${p.id}</td>
+          <td><strong>${p.name}</strong></td>
+          <td>${p.category}</td>
+          <td>R$ ${p.price.toFixed(2)}</td>
+          <td>
+            <span class="badge ${p.stock > 0 ? 'badge-success' : 'badge-danger'}">
+              ${p.stock} un.
+            </span>
+          </td>
+          <td>
+            <input type="number" class="stock-input" id="stock-input-${p.id}" value="${p.stock}" min="0" />
+            <button class="btn btn-primary btn-sm" onclick="updateStock(${p.id})">Salvar</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function updateStock(id) {
+      const input = document.getElementById(`stock-input-${id}`);
+      const newStock = parseInt(input.value, 10);
+
+      const res = await adminFetch(`/products/${id}/stock`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ stock: newStock })
+      });
+
+      if (res.ok) {
+        alert("Estoque atualizado!");
+        await loadProducts();
+      }
+    }
+
+    document.getElementById("formProduct").onsubmit = async (e) => {
+      e.preventDefault();
+      const body = {
+        name: document.getElementById("pName").value,
+        price: parseFloat(document.getElementById("pPrice").value),
+        stock: parseInt(document.getElementById("pStock").value, 10),
+        category: document.getElementById("pCategory").value
+      };
+
+      const res = await adminFetch("/products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+
+      if (res.ok) {
+        alert("Produto cadastrado com sucesso!");
+        document.getElementById("formProduct").reset();
+        await loadProducts();
+      }
+    };
+
+    async function loadCoupons() {
+      const res = await adminFetch("/coupons");
+      const coupons = await res.json();
+      const tbody = document.getElementById("couponsTableBody");
+      tbody.innerHTML = "";
+
+      coupons.forEach(c => {
+        const tr = document.createElement("tr");
+        const desc = c.discount_type === "percentage" ? `${c.discount_value}%` : `R$ ${c.discount_value.toFixed(2)}`;
+        tr.innerHTML = `
+          <td><strong>${c.code}</strong></td>
+          <td>${desc}</td>
+          <td>
+            <span class="badge ${c.active ? 'badge-success' : 'badge-danger'}">
+              ${c.active ? 'Ativo' : 'Inativo'}
+            </span>
+          </td>
+          <td>
+            <button class="btn btn-toggle btn-sm" onclick="toggleCoupon(${c.id})">
+              ${c.active ? 'Desativar' : 'Ativar'}
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    document.getElementById("formCoupon").onsubmit = async (e) => {
+      e.preventDefault();
+      const body = {
+        code: document.getElementById("cCode").value,
+        discount_type: document.getElementById("cType").value,
+        discount_value: parseFloat(document.getElementById("cValue").value)
+      };
+
+      const res = await adminFetch("/coupons", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+
+      if (res.ok) {
+        alert("Cupom criado!");
+        document.getElementById("formCoupon").reset();
+        await loadCoupons();
+      }
+    };
+
+    async function toggleCoupon(id) {
+      const res = await adminFetch(`/coupons/${id}/toggle`, { method: "PATCH" });
+      if (res.ok) await loadCoupons();
+    }
+
+    async function loadOrders() {
+      const res = await adminFetch("/admin/orders");
+      const orders = await res.json();
+      const tbody = document.getElementById("ordersTableBody");
+      tbody.innerHTML = "";
+
+      if (!orders || orders.length === 0) {
+        tbody.innerHTML = "<tr><td colspan='6' style='text-align:center; color:#94a3b8;'>Nenhum pedido realizado ainda.</td></tr>";
+        return;
+      }
+
+      orders.forEach(o => {
+        const tr = document.createElement("tr");
+        const isSuccess = o.status === "completed";
+        tr.innerHTML = `
+          <td>#${o.id}</td>
+          <td><code>${o.user_id}</code></td>
+          <td>${new Date(o.created_at).toLocaleString("pt-BR")}</td>
+          <td>${o.coupon_applied ? '<code>' + o.coupon_applied + '</code>' : '-'}</td>
+          <td>
+            <span class="badge ${isSuccess ? 'badge-success' : 'badge-danger'}">
+              ${isSuccess ? 'Aprovado' : 'Falhou'}
+            </span>
+          </td>
+          <td><strong>R$ ${o.total.toFixed(2)}</strong></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    document.addEventListener("DOMContentLoaded", loadAll);
+  </script>
+</body>
+</html>

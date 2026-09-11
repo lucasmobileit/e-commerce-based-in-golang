@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mercado Go | Meu Perfil</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    body { background-color: #ededed; color: #333; display: flex; flex-direction: column; min-height: 100vh; }
+
+    .top-header { background-color: #ffe600; padding: 10px 24px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e6ce00; }
+    .header-left { display: flex; align-items: center; gap: 20px; }
+    .brand { font-size: 18px; font-weight: bold; color: #2d3277; text-decoration: none; display: flex; align-items: center; gap: 6px; }
+    .search-bar { background: #fff; border-radius: 4px; display: flex; align-items: center; padding: 6px 12px; width: 420px; box-shadow: 0 1px 2px rgba(0,0,0,.15); }
+    .search-bar input { border: none; outline: none; width: 100%; font-size: 13px; }
+    .header-right { display: flex; align-items: center; gap: 16px; font-size: 13px; font-weight: 500; }
+    .header-right a { color: #333; text-decoration: none; }
+    .header-right a:hover { color: #2968c8; }
+
+    .sub-bar { background: #fff; padding: 10px 24px; display: flex; align-items: center; justify-content: space-between; font-size: 13px; border-bottom: 1px solid #e5e5e5; }
+    .sub-links { display: flex; gap: 20px; }
+    .sub-links a { text-decoration: none; color: #666; }
+    .sub-links a.active { color: #333; font-weight: 600; border-bottom: 2px solid #3483fa; padding-bottom: 10px; }
+
+    .main-wrapper { display: flex; flex: 1; max-width: 1400px; width: 100%; margin: 0 auto; padding: 16px 24px; gap: 24px; }
+    .sidebar { width: 220px; flex-shrink: 0; }
+    .sidebar-btn { width: 100%; background: #fff; border: 1px solid #3483fa; color: #3483fa; padding: 10px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; margin-bottom: 16px; }
+    .sidebar-menu { list-style: none; display: flex; flex-direction: column; gap: 2px; }
+    .sidebar-menu li a { display: flex; align-items: center; gap: 10px; padding: 8px 12px; font-size: 13px; color: #4b4b4b; text-decoration: none; border-radius: 6px; }
+    .sidebar-menu li a.active { background: #e8f0fe; color: #1967d2; font-weight: 600; }
+    .sidebar-category { font-size: 12px; font-weight: bold; color: #333; margin: 12px 0 4px 10px; }
+
+    .content-area { flex: 1; max-width: 900px; }
+    .profile-banner { display: flex; align-items: center; gap: 20px; margin-bottom: 24px; }
+    .avatar-box { position: relative; width: 80px; height: 80px; }
+    .avatar-img { width: 100%; height: 100%; border-radius: 50%; background: #111; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: bold; border: 3px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.15); }
+    .meli-badge { position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%); background: #e6007e; color: #fff; font-size: 10px; font-weight: bold; padding: 2px 8px; border-radius: 10px; border: 1px solid #fff; }
+
+    .user-meta h2 { font-size: 20px; font-weight: 600; color: #222; }
+    .user-meta p { font-size: 13px; color: #666; margin-top: 2px; }
+
+    .cards-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 30px; }
+    .profile-card { background: #fff; border-radius: 8px; padding: 18px; box-shadow: 0 1px 2px rgba(0,0,0,0.06); border: 1px solid #e0e0e0; cursor: pointer; transition: transform .15s, box-shadow .15s; min-height: 125px; }
+    .profile-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .card-icon { font-size: 20px; }
+    .card-title { font-size: 14px; font-weight: 600; color: #333; margin-bottom: 4px; }
+    .card-desc { font-size: 12px; color: #737373; line-height: 1.4; }
+
+    /* Modal */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+    .modal-overlay.hidden { display: none; }
+    .modal-card { background: #fff; border-radius: 8px; width: 90%; max-width: 550px; overflow: hidden; }
+    .modal-header { padding: 16px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+    .modal-body { padding: 20px; max-height: 70vh; overflow-y: auto; }
+    .form-row { display: flex; gap: 12px; margin-bottom: 12px; }
+    .form-group { display: flex; flex-direction: column; gap: 4px; flex: 1; margin-bottom: 12px; }
+    .form-group label { font-size: 12px; font-weight: 600; color: #555; }
+    .form-group input { padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
+    .modal-footer { padding: 16px 20px; border-top: 1px solid #eee; display: flex; justify-content: flex-end; gap: 10px; background: #fafafa; }
+    .btn-save { background: #3483fa; color: #fff; border: none; padding: 8px 18px; border-radius: 4px; font-weight: 600; cursor: pointer; }
+    .btn-cancel { background: #e0e0e0; border: none; padding: 8px 16px; border-radius: 4px; font-weight: 600; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <header class="top-header">
+    <div class="header-left">
+      <a href="/" class="brand">⚡ mercado<strong>go</strong></a>
+      <div class="search-bar">
+        <input type="text" placeholder="Buscar produtos, marcas e muito mais..." />
+        <span>🔍</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <span>Conta: <strong id="loggedUserBadge">...</strong></span>
+      <a href="/login.html">Sair / Trocar 🚪</a>
+      <a href="/" target="_blank">Ir para a Loja 🛍️</a>
+      <a href="/admin.html" id="adminBackofficeLink" style="display:none;" target="_blank">Backoffice ⚙️</a>
+    </div>
+  </header>
+
+  <div class="sub-bar">
+    <div class="sub-links">
+      <a href="#">Resumo</a>
+      <a href="#">Vendas</a>
+      <a href="#">Anúncios</a>
+      <a href="#" class="active">Meu perfil 📑</a>
+    </div>
+    <div style="font-size: 12px; color: #666;">
+      Identificador de Sessão: <strong id="activeUserIdLabel">...</strong>
+    </div>
+  </div>
+
+  <div class="main-wrapper">
+    <aside class="sidebar">
+      <button class="sidebar-btn">✨ Assistente de vendedores</button>
+      <ul class="sidebar-menu">
+        <li><a href="#">🏠 Resumo</a></li>
+        <li><a href="#">📦 Vendas</a></li>
+        <li class="sidebar-category">Configurações</li>
+        <li><a href="#" class="active">👤 Meu perfil</a></li>
+      </ul>
+    </aside>
+
+    <main class="content-area">
+      <div class="profile-banner">
+        <div class="avatar-box">
+          <div class="avatar-img" id="avatarLetter">?</div>
+          <span class="meli-badge">meli+</span>
+        </div>
+        <div class="user-meta">
+          <h2 id="profileNameDisplay">Carregando...</h2>
+          <p id="profileEmailDisplay">...</p>
+        </div>
+      </div>
+
+      <div class="cards-grid">
+        <div class="profile-card" id="cardProfileInfo">
+          <div class="card-top">
+            <span class="card-icon">📋</span>
+            <span style="font-size: 11px; color: #3483fa; font-weight: bold;">EDITAR ✎</span>
+          </div>
+          <div class="card-title">Informações do seu perfil</div>
+          <div class="card-desc">Dados pessoais e de contato cadastrados na sua conta.</div>
+        </div>
+
+        <div class="profile-card">
+          <div class="card-top"><span class="card-icon">🔒</span><span style="color:#00a650;">✔</span></div>
+          <div class="card-title">Segurança</div>
+          <div class="card-desc">Autenticação centralizada via sessão e cookies HTTP.</div>
+        </div>
+
+        <div class="profile-card">
+          <div class="card-top"><span class="card-icon">⭐</span></div>
+          <div class="card-title">Meli+</div>
+          <div class="card-desc">Benefícios ativos na sua assinatura.</div>
+        </div>
+
+        <div class="profile-card" id="cardAddresses">
+          <div class="card-top">
+            <span class="card-icon">📍</span>
+            <span style="font-size: 11px; color: #3483fa; font-weight: bold;">EDITAR ✎</span>
+          </div>
+          <div class="card-title">Endereços</div>
+          <div class="card-desc" id="addressCardPreview">Endereço de entrega principal.</div>
+        </div>
+
+        <div class="profile-card">
+          <div class="card-top"><span class="card-icon">💳</span></div>
+          <div class="card-title">Cartões</div>
+          <div class="card-desc">Métodos de pagamento vinculados.</div>
+        </div>
+
+        <div class="profile-card">
+          <div class="card-top"><span class="card-icon">🛍️</span></div>
+          <div class="card-title">Histórico de Compras</div>
+          <div class="card-desc" id="profileOrdersCount">Consulte suas compras.</div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal -->
+  <div id="editProfileModal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Atualizar Dados do Perfil</h3>
+        <button id="btnCloseModal" style="border:none; background:none; font-size:20px; cursor:pointer;">&times;</button>
+      </div>
+      <form id="profileForm">
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Nome Completo</label>
+            <input type="text" id="inputName" required />
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>E-mail</label>
+              <input type="email" id="inputEmail" required />
+            </div>
+            <div class="form-group">
+              <label>Telefone</label>
+              <input type="text" id="inputPhone" />
+            </div>
+          </div>
+          <hr style="border:none; border-top:1px solid #eee; margin:16px 0;" />
+          <h4 style="font-size:13px; margin-bottom:10px;">Endereço</h4>
+          <div class="form-row">
+            <div class="form-group" style="flex:2;">
+              <label>Rua/Avenida</label>
+              <input type="text" id="inputStreet" />
+            </div>
+            <div class="form-group" style="flex:1;">
+              <label>Número</label>
+              <input type="text" id="inputNumber" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Cidade</label>
+              <input type="text" id="inputCity" />
+            </div>
+            <div class="form-group">
+              <label>CEP</label>
+              <input type="text" id="inputZip" />
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" id="btnCancelEdit" class="btn-cancel">Cancelar</button>
+          <button type="submit" class="btn-save">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    async function loadProfile() {
+      try {
+        const res = await fetch("/profile");
+        if (!res.ok) {
+          window.location.href = "/login.html";
+          return;
+        }
+
+        const user = await res.json();
+        document.getElementById("loggedUserBadge").innerText = user.id;
+        document.getElementById("activeUserIdLabel").innerText = user.id;
+        document.getElementById("profileNameDisplay").innerText = user.name;
+        document.getElementById("profileEmailDisplay").innerText = user.email;
+        document.getElementById("avatarLetter").innerText = user.name.charAt(0).toUpperCase();
+
+        if (user.address_street) {
+          document.getElementById("addressCardPreview").innerText = `${user.address_street}, ${user.address_number} - ${user.address_city}`;
+        }
+
+        // Se for admin, exibe o link do backoffice no header
+        if (user.role === "admin") {
+          document.getElementById("adminBackofficeLink").style.display = "inline";
+        }
+
+        // Preenche o formulário
+        document.getElementById("inputName").value = user.name || "";
+        document.getElementById("inputEmail").value = user.email || "";
+        document.getElementById("inputPhone").value = user.phone || "";
+        document.getElementById("inputStreet").value = user.address_street || "";
+        document.getElementById("inputNumber").value = user.address_number || "";
+        document.getElementById("inputCity").value = user.address_city || "";
+        document.getElementById("inputZip").value = user.address_zip || "";
+
+        // Conta de pedidos
+        const ordersRes = await fetch("/orders");
+        const orders = await ordersRes.json();
+        document.getElementById("profileOrdersCount").innerText = `${orders ? orders.length : 0} pedido(s) realizado(s).`;
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    document.getElementById("profileForm").onsubmit = async (e) => {
+      e.preventDefault();
+      const payload = {
+        name: document.getElementById("inputName").value,
+        email: document.getElementById("inputEmail").value,
+        phone: document.getElementById("inputPhone").value,
+        address_street: document.getElementById("inputStreet").value,
+        address_number: document.getElementById("inputNumber").value,
+        address_city: document.getElementById("inputCity").value,
+        address_zip: document.getElementById("inputZip").value
+      };
+
+      const res = await fetch("/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        alert("Perfil atualizado no SQLite com sucesso!");
+        document.getElementById("editProfileModal").classList.add("hidden");
+        await loadProfile();
+      }
+    };
+
+    const openModal = () => document.getElementById("editProfileModal").classList.remove("hidden");
+    const closeModal = () => document.getElementById("editProfileModal").classList.add("hidden");
+
+    document.getElementById("cardProfileInfo").onclick = openModal;
+    document.getElementById("cardAddresses").onclick = openModal;
+    document.getElementById("btnCloseModal").onclick = closeModal;
+    document.getElementById("btnCancelEdit").onclick = closeModal;
+
+    document.addEventListener("DOMContentLoaded", loadProfile);
+  </script>
+</body>
+</html>
